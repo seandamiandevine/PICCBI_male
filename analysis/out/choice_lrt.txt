@@ -1,0 +1,15 @@
+Data: choice
+Models:
+m0: hit ~ 1 + (trial_c0 | prolID)
+m1: hit ~ size_c0 + (trial_c0 | prolID)
+m2: hit ~ trial_c0 * size_c0 + (trial_c0 | prolID)
+m3: hit ~ condition_c * trial_c0 * size_c0 + (trial_c0 | prolID)
+m4: hit ~ stim_type_c * condition_c * trial_c0 * size_c0 + (trial_c0 | prolID)
+   npar    AIC    BIC  logLik deviance     Chisq Df Pr(>Chisq)    
+m0    4 266242 266283 -133117   266234                            
+m1    5  95332  95383  -47661    95322 170912.56  1  < 2.2e-16 ***
+m2    7  95139  95210  -47562    95125    197.42  2  < 2.2e-16 ***
+m3   11  93980  94092  -46979    93958   1166.68  4  < 2.2e-16 ***
+m4   19  85950  86144  -42956    85912   8046.03  8  < 2.2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1

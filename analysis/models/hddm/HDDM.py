@@ -46,7 +46,7 @@ ddm.find_starting_values()
 ddm.sample(3000,burn=1000,db='pickle')
 ddm.save(f'fits/fit_depends_on')
 
-ddm = hddm.load('fits/fit_depends_on')
+# ddm = hddm.load('fits/fit_depends_on')
 
 # ****************************************************************************
 # *                         Add p-values and Geweke's                        *
@@ -105,7 +105,7 @@ for i,p in enumerate(['a','v','t']):
     tmp['stim_cond'] = [i[:-1] for i in cats]
     tmp['prev_cond'] = [int(i[-1]) for i in cats]
 
-    tmp['stim_cond'] = np.where(tmp.stim_cond=='TF', 'Thin\nFat','Thin\nMuscular')
+    tmp['stim_cond'] = np.where(tmp.stim_cond=='TF', 'Thin/\nOverweight','Thin/\nMuscular')
     tmp['prev_cond'] = np.where(tmp.prev_cond==1,'Changing','Stable')
        
     tmp['lb'] = tmp['mean'] - tmp['2.5q']
@@ -118,7 +118,7 @@ for i,p in enumerate(['a','v','t']):
     ax[i].set(title=titles[p], xlabel='', ylabel='')
 
     if i ==0:
-    	ax[i].set(ylabel='Intercept')
+    	ax[i].set(ylabel='Parameter Value')
     	ax[i].legend(title='Prevalence Condition', loc='lower left', prop={'size':14})
     else:
     	ax[i].legend([],[], frameon=False)
@@ -137,48 +137,76 @@ titles = {'a':'Decision Threshold', 'v':'Drift Rate', 't':'Non-Decision Time'}
 pars   = ddm_summary[ddm_summary.index.str.contains('Intercept\(')].index.to_list()
 traces = ddm.nodes_db.node[[i for i in pars]]
 
-p_values = {}
-# fig, ax = plt.subplots(2,3, figsize=[12,8], constrained_layout=True)
+diffs  = {'comp':[],'b':[],'ci_lb':[],'ci_ub':[],'p':[]}
+stim_cols = ['darkgreen','darkblue']
+cond_cols = ['orange','darkred']
 
-fig, ax = plt.subplots(1,3, figsize=[16,5], constrained_layout=True)
 for i,p in enumerate(['a','v','t']):
+
 	tmp = traces[[j for j in pars if f'{p}_' in j]]
 
 	# compare stim conds
+    fig, ax = plt.subplots(1)
+
 	tf = np.concatenate([j.trace() for j in tmp[tmp.index.str.contains('TF')]])
 	tm = np.concatenate([j.trace() for j in tmp[tmp.index.str.contains('TM')]])
-	p_values[f'{p}_TF_gt_TM'] = np.mean(tf > tm)
-	p_values[f'{p}_TF_lt_TM'] = np.mean(tf < tm)
+    diff = tf-tm
 
-    xaxis   = np.linspace(np.concatenate([tf,tm]).min(),np.concatenate([tf,tm]).max(), 500)
-    dens_tf = gaussian_kde(tf)(xaxis)
-    dens_tm = gaussian_kde(tm)(xaxis)
+    diffs['comp'].append(f'{p}_TF_TM')
+    diffs['b'].append(diff.mean())
+    lb,ub  = np.quantile(diff, [.025,.975])
+    diffs['ci_lb'].append(lb)
+    diffs['ci_ub'].append(ub)
+    diffs['p'].append((diff>0).mean())
 
-    ax[i].plot(xaxis,dens_tf, label='Thin/Fat')
-    ax[i].plot(xaxis,dens_tm, label='Thin/Muscular')
-    ax[i].set(title=titles[p])
-    if(i==0):
-        ax[i].legend(title='Stimulus Type', loc='upper left')
-        ax[i].set(ylim=[0, np.concatenate([dens_tf, dens_tm]).max()+3])
+
+    xaxis    = np.linspace(np.concatenate([tf,tm]).min(),np.concatenate([tf,tm]).max(), 500)
+    dens_tf  = gaussian_kde(tf)(xaxis)
+    dens_tm  = gaussian_kde(tm)(xaxis)
+    dens_tf0 = dens_tf/dens_tf.max()
+    dens_tm0 = dens_tm/dens_tm.max()
+
+    ax.plot(xaxis,dens_tf0, label='Thin/Overweight', c=stim_cols[0])
+    ax.plot(xaxis,dens_tm0, label='Thin/Muscular', c=stim_cols[1])
+    ax.legend(title='Stimulus Type', loc='upper left')
+    ax.set(ylim=[0, 1.5], ylabel='Normalized Density', title=titles[p], yticks=[0,0.5,1])
+    ax.fill_between(xaxis, dens_tf0, color=stim_cols[0], alpha=0.35)
+    ax.fill_between(xaxis, dens_tm0, color=stim_cols[1], alpha=0.35)
+
+    fig.savefig(f'figs/TF_vs_TM_density_{p}.png')
+    plt.close()
 
 	# compare prev conds
+    fig, ax = plt.subplots(1)
+
 	t0 = np.concatenate([j.trace() for j in tmp[tmp.index.str.contains('0')]])
 	t1 = np.concatenate([j.trace() for j in tmp[tmp.index.str.contains('1')]])
+    diff = t0-t1
 
-    # xaxis   = np.linspace(np.concatenate([t0,t1]).min(),np.concatenate([t0,t1]).max(), 500)
-    # dens_t0 = gaussian_kde(t0)(xaxis)
-    # dens_t1 = gaussian_kde(t1)(xaxis)
+    diffs['comp'].append(f'{p}_S_C')
+    diffs['b'].append(diff.mean())
+    lb,ub  = np.quantile(diff, [.025,.975])
+    diffs['ci_lb'].append(lb)
+    diffs['ci_ub'].append(ub)
+    diffs['p'].append((diff>0).mean())
 
-    # ax[1,i].plot(xaxis,dens_t0, label='Stable', c='orange')
-    # ax[1,i].plot(xaxis,dens_t1, label='Changing', c='darkred')
-    # if(i==0):
-    #     ax[1,i].legend(title='Prevalence Condition')
+    xaxis    = np.linspace(np.concatenate([t0,t1]).min(),np.concatenate([t0,t1]).max(), 500)
+    dens_t0  = gaussian_kde(t0)(xaxis)
+    dens_t1  = gaussian_kde(t1)(xaxis)
+    dens_t00 = dens_t0/dens_t0.max()
+    dens_t10 = dens_t1/dens_t1.max()
 
-	p_values[f'{p}_S_gt_C'] = np.mean(t0 > t1)
-	p_values[f'{p}_S_lt_C'] = np.mean(t0 < t1)
+    ax.plot(xaxis,dens_t00, label='Stable', c=cond_cols[0])
+    ax.plot(xaxis,dens_t10, label='Changing', c=cond_cols[1])
+    ax.set(ylim=[0, 1.5], ylabel='Normalized Density', title=titles[p])
+    ax.legend(title='Prevalence Condition')
+    ax.fill_between(xaxis, dens_t00, color=cond_cols[0], alpha=0.35)
+    ax.fill_between(xaxis, dens_t10, color=cond_cols[1], alpha=0.35)
 
-plt.show()
-fig.savefig('figs/TF_vs_TM_density.png')
+    fig.savefig(f'figs/0_vs_1_density_{p}.png')
+    plt.close()
+
+
 pd.DataFrame(p_values, index=[0]).T.to_csv('stats/stim_comp_pvals.csv')
 
 

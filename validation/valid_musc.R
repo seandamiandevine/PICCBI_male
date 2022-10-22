@@ -7,8 +7,7 @@ se = function(x) sd(x,na.rm=T)/sqrt(length(x))
 # Load data ---------------------------------------------------------------
 
 dat  = read.csv('raw_ratings_musc.csv')
-demo = read.csv('demo.csv')
-
+demo = read.csv('demo_musc.csv')
 
 # Descriptives ------------------------------------------------------------
 
@@ -29,22 +28,28 @@ dat$harmony        = as.numeric(dat$harmony)
 # Weight ----------------------------------------------------------
 
 ## Visualize ----
-m    = tapply(dat$weight, dat$size, mean, na.rm=T)
-pts  = tapply(dat$weight, list(dat$subject,dat$size), mean, na.rm=T)
+m      = tapply(-dat$weight, dat$size, mean, na.rm=T)
+pts    = tapply(-dat$weight, list(dat$subject,dat$size), mean, na.rm=T)
+ylimit = c(min(pts), max(pts))
+yax    = seq(ylimit[1], ylimit[2], length.out=5)
 
 pdf('figs/musc_weight_ratings.pdf', 6,4)
-plot(names(m), m, xlab='Size', ylab='Avg. Thinnes Rating', main='Thinness',
-     ylim=c(0,100), col='red', pch=5, cex=1.5, lwd=2)
+plot(names(m), m, xlab='Objective Muscularity', ylab='Avg. Muscularity Rating', main='Muscularity Ratings',
+     ylim=ylimit, col='red', pch=5, cex=1.5, lwd=2, yaxt='n')
+axis(2,at=yax, labels = rev(abs(yax)))
 for(i in 1:ncol(pts)) {
   points(rep(names(m)[i],nrow(pts)), pts[,i], pch=16, col=scales::alpha('grey20', .05))
 }
 
 dev.off()
 
-## Model ----
 
-weight_mod = lmer(weight ~ size0 + (size0|subject), data=dat)
+## Model ----
+dat$neg_weight = -dat$weight
+
+weight_mod = lmer(neg_weight ~ size0 + (size0|subject), data=dat)
 summary(weight_mod)
+sjPlot::tab_model(weight_mod)
 
 # Attractiveness ----------------------------------------------------------
 
@@ -54,7 +59,7 @@ pts  = tapply(dat$attractiveness, list(dat$subject,dat$size), mean, na.rm=T)
 labs = names(rev(tapply(dat$size, dat$img,mean)))
 
 pdf('figs/musc_attractiveness_ratings.pdf', 6,4)
-plot(names(m), m, xlab='Size', ylab='Avg. Attractiveness Rating', main='Attractiveness'
+plot(names(m), m, xlab='Objective Muscularity', ylab='Avg. Attractiveness Rating', main='Attractiveness'
      , ylim=c(0,100), col='red', pch=5, cex=1.5, lwd=2)
 for(i in 1:ncol(pts)) {
   points(rep(names(m)[i],nrow(pts)), pts[,i], pch=16, col=scales::alpha('grey20', .05))
@@ -75,7 +80,7 @@ m    = tapply(dat$harmony, dat$size, mean, na.rm=T)
 pts  = tapply(dat$harmony, list(dat$subject,dat$size), mean, na.rm=T)
 
 pdf('figs/musc_harmony_ratings.pdf', 6,4)
-plot(names(m), m, xlab='Size', ylab='Avg. Harmony Rating', main='Harmony',
+plot(names(m), m, xlab='Objective Muscularity', ylab='Avg. Harmony Rating', main='Harmony',
      ylim=c(0,100), col='red', pch=5, cex=1.5, lwd=2)
 for(i in 1:ncol(pts)) {
   points(rep(names(m)[i],nrow(pts)), pts[,i], pch=16, col=scales::alpha('grey20', .05))
@@ -95,7 +100,7 @@ m    = tapply(dat$beauty, dat$size, mean, na.rm=T)
 pts  = tapply(dat$beauty, list(dat$subject,dat$size), mean, na.rm=T)
 
 pdf('figs/musc_beauty_ratings.pdf', 6,4)
-plot(names(m), m, xlab='Size', ylab='Avg. Beauty Rating', main='Beauty',
+plot(names(m), m, xlab='Objective Muscularity', ylab='Avg. Beauty Rating', main='Beauty',
      ylim=c(0,100), col='red', pch=5, cex=1.5, lwd=2)
 for(i in 1:ncol(pts)) {
   points(rep(names(m)[i],nrow(pts)), pts[,i], pch=16, col=scales::alpha('grey20', .05))
